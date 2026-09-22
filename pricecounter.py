@@ -9,25 +9,27 @@ def image_precount(img):
     resized_image = img.resize((2480, 3508))
     return resized_image
 
+def classify_pixels(pixels):
+    r, g, b = pixels[:,:,0], pixels[:,:,1], pixels[:,:,2]
+    is_mono = (r == g) & (g == b)
+    bw_count = int(is_mono.sum())
+    color_count = int((~is_mono).sum())
+    return color_count, bw_count
+
 def countColorArea(img):
     img_array = np.array(img)
-    color_pixels = np.all(img_array[:, :, :3] != img_array[:, :, :3].mean(axis=2, keepdims=True), axis=2)
-    color_area = np.sum(color_pixels)
+    color_count, _ = classify_pixels(img_array)
     total_pixels = img_array.shape[0] * img_array.shape[1]
-    return round((color_area / total_pixels) * 100, 2)
+    return round((color_count / total_pixels) * 100, 2) if total_pixels > 0 else 0.0
 
 def CountBlackArea(img):
     img_array = np.array(img)
-    
-    similiar_pixels = np.all(img_array[:, :, :3] == img_array[:, :, :3].mean(axis=2, keepdims=True), axis=2)
-    total_similiar_pixels = np.sum(similiar_pixels)
-    
+    _, bw_count = classify_pixels(img_array)
     white_pixels = np.all(img_array[:, :, :3] == 255, axis=2)
     total_white_pixels = np.sum(white_pixels)
-    
-    bw_area = np.sum(total_similiar_pixels-total_white_pixels)
+    bw_area = bw_count - total_white_pixels
     total_pixels = img_array.shape[0] * img_array.shape[1]
-    return round((bw_area / total_pixels) * 100, 2)
+    return round((bw_area / total_pixels) * 100, 2) if total_pixels > 0 else 0.0
 
 def priceCounter(img):
     color_area = countColorArea(img)
