@@ -36,6 +36,17 @@ class TestUpload:
         )
         assert resp.status_code == 401
 
+    def test_empty_api_key_fails_closed(self, client, monkeypatch):
+        monkeypatch.setattr(Config, "API_KEY", "")
+        data = {"file": (io.BytesIO(b"fake"), "test.pdf")}
+        resp = client.post(
+            "/api/v3/upload",
+            data=data,
+            content_type="multipart/form-data",
+            headers={"api-key": "anything"},
+        )
+        assert resp.status_code == 401
+
     def test_non_pdf_rejected(self, client, auth_header):
         data = {"file": (io.BytesIO(b"not a pdf"), "test.txt")}
         resp = client.post(

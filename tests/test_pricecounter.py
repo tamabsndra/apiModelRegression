@@ -1,7 +1,31 @@
+import io
+
 import numpy as np
 from PIL import Image
 
-from pricecounter import analyze_page, classify_pixels
+from pricecounter import analyze_page, classify_pixels, getprice
+
+
+def make_pdf_bytes(r, g, b, pages=1):
+    buf = io.BytesIO()
+    images = [Image.new("RGB", (100, 100), (r, g, b)) for _ in range(pages)]
+    images[0].save(buf, format="PDF", save_all=True, append_images=images[1:])
+    buf.seek(0)
+    return buf.getvalue()
+
+
+class TestGetpricePerPage:
+    def test_blank_three_pages_price_900(self, tmp_path):
+        path = tmp_path / "blank3.pdf"
+        path.write_bytes(make_pdf_bytes(255, 255, 255, pages=3))
+        assert getprice(str(path)) == 900
+
+    def test_ten_gray_pages_proportional_to_single_page(self, tmp_path):
+        one = tmp_path / "gray1.pdf"
+        ten = tmp_path / "gray10.pdf"
+        one.write_bytes(make_pdf_bytes(128, 128, 128, pages=1))
+        ten.write_bytes(make_pdf_bytes(128, 128, 128, pages=10))
+        assert getprice(str(ten)) == 10 * getprice(str(one))
 
 
 class TestClassifyPixels:

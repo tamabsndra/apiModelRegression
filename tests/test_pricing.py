@@ -59,6 +59,16 @@ class TestCalculatePrice:
         result = calculate_price(1.0, 0.0, make_config(cap="1000"))
         assert result["price"] == 1000
 
+    def test_empty_price_cap_disables_cap(self, monkeypatch):
+        monkeypatch.setattr(Config, "PRICE_CAP_RAW", "")
+        config = Config()
+        assert config.PRICE_CAP is None
+        assert calculate_price(1.0, 0.0, config)["price"] > 2500
+
+    def test_tiny_color_coverage_hits_color_floor(self):
+        result = calculate_price(0.0001, 0.0, make_config())
+        assert result["price"] == 500
+
     def test_step_disabled(self):
         result = calculate_price(0.0, 0.50, make_config(step=0))
         assert result["price"] == 544
