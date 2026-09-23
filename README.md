@@ -37,6 +37,7 @@ Upload a PDF and get pricing estimate.
 | `unauthorized` | 401 | Missing or invalid API key |
 | `bad_request` | 400 | Invalid PDF or missing file |
 | `payload_too_large` | 413 | File exceeds MAX_CONTENT_LENGTH |
+| `too_many_pages` | 413 | PDF exceeds MAX_PAGES |
 
 ### `GET /healthz`
 
@@ -48,12 +49,13 @@ Health check. Returns `{"status": "ok"}`.
 |----------|---------|-------------|
 | `API_KEY` | (empty = reject all) | API authentication key |
 | `UPLOAD_FOLDER` | `uploads` | Temp upload directory |
-| `MAX_CONTENT_LENGTH` | `16777216` (16 MB) | Max upload size |
-| `PRICE_COEFF_COLOR` | `4.2` | Color coverage coefficient |
-| `PRICE_COEFF_BW` | `1.8` | BW coverage coefficient |
-| `PRICE_INTERCEPT` | `150` | Base price intercept |
-| `PRICE_STEP` | `250` | Ladder rounding step (0=off) |
-| `PRICE_CAP` | `3000` | Max price cap (empty=off) |
+| `MAX_CONTENT_LENGTH` | `52428800` (50 MB) | Max upload size |
+| `MAX_PAGES` | `500` | Max pages per PDF (413 `too_many_pages` beyond) |
+| `PRICE_COEFF_COLOR` | `19.59733806` | Color coverage coefficient |
+| `PRICE_COEFF_BW` | `7.05360083` | BW coverage coefficient |
+| `PRICE_INTERCEPT` | `191.3642` | Base price intercept |
+| `PRICE_STEP` | `250` | Ladder rounding to nearest step (0=off) |
+| `PRICE_CAP` | `3000` | Per-page price cap (empty=off) |
 | `PRICE_FLOOR_BW` | `300` | Minimum BW price |
 | `PRICE_FLOOR_COLOR` | `500` | Minimum color price |
 
@@ -71,17 +73,17 @@ Health check. Returns `{"status": "ok"}`.
 
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| Color coefficient | 4.2 | Linear regression fit |
-| BW coefficient | 1.8 | Linear regression fit |
-| Intercept | 150 | Linear regression fit |
-| R² | 0.964 | Training set fit quality |
-| MAE | ~180 IDR | Mean absolute error on test set |
+| Color coefficient | 19.59733806 | Linear regression fit |
+| BW coefficient | 7.05360083 | Linear regression fit |
+| Intercept | 191.3642 | Linear regression fit |
+| R2 | 0.9529 | Dataset fit quality (n=1102) |
+| MAE | ~107.5 IDR | Mean absolute error on dataset |
 
 ### Ladder Rules
 
-- Prices round UP to the nearest `PRICE_STEP` (default 250 IDR)
+- Prices snap to the NEAREST `PRICE_STEP` multiple (default 250 IDR), never below the floor
 - `PRICE_STEP=0` disables rounding
-- `PRICE_CAP` caps total price (empty = no cap)
+- `PRICE_CAP` applies per page (empty = no cap); there is no grand-total cap
 - Floors guarantee minimum prices: 300 IDR (BW), 500 IDR (color)
 
 ## Development

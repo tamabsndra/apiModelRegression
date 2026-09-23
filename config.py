@@ -5,6 +5,7 @@ class Config:
     API_KEY = os.environ.get("API_KEY", "")
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", str(50 * 1024 * 1024)))
+    MAX_PAGES = int(os.environ.get("MAX_PAGES", "500"))
 
     PRICE_COEFF_COLOR = float(os.environ.get("PRICE_COEFF_COLOR", "19.59733806"))
     PRICE_COEFF_BW = float(os.environ.get("PRICE_COEFF_BW", "7.05360083"))

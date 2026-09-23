@@ -15,22 +15,23 @@ def allowed_file(filename):
 
 
 def validate_pdf(filepath):
+    """Validate magic bytes and page count. Returns (valid, err_msg, page_count)."""
     with open(filepath, "rb") as f:
         magic = f.read(5)
     if magic != b"%PDF-":
         os.unlink(filepath)
-        return False, "Not a valid PDF"
+        return False, "Not a valid PDF", 0
     try:
         pdf = pdfium.PdfDocument(filepath)
         page_count = len(pdf)
         pdf.close()
         if page_count == 0:
             os.unlink(filepath)
-            return False, "PDF has no pages"
+            return False, "PDF has no pages", 0
     except Exception:
         os.unlink(filepath)
-        return False, "Malformed PDF"
-    return True, None
+        return False, "Malformed PDF", 0
+    return True, None, page_count
 
 
 def register_routes(app):
@@ -58,7 +59,10 @@ def register_routes(app):
     @app.route("/api/v3/upload", methods=["POST"])
     def upload_file():
         api_key = request.headers.get("api-key", "")
-        if not Config.API_KEY or not hmac.compare_digest(api_key, Config.API_KEY):
+        if not Config.API_KEY or not hmac.compare_digest(
+            api_key.encode("latin-1", errors="replace"),
+            Config.API_KEY.encode("latin-1", errors="replace"),
+        ):
             return jsonify({"error": "unauthorized", "detail": "Invalid or missing API key"}), 401
 
         file = request.files.get("file")
@@ -73,20 +77,29 @@ def register_routes(app):
         filepath = os.path.join(Config.UPLOAD_FOLDER, safe_name)
         file.save(filepath)
 
-        valid, err_msg = validate_pdf(filepath)
+        valid, err_msg, page_count = validate_pdf(filepath)
         if not valid:
             return jsonify({"error": "invalid_pdf", "detail": err_msg}), 400
 
+        if page_count > Config.MAX_PAGES:
+            os.unlink(filepath)
+            return jsonify(
+                {"error": "too_many_pages", "detail": f"Max {Config.MAX_PAGES} pages"}
+            ), 413
+
         try:
             from pricecounter import getpage, getprice
+
             price = getprice(filepath)
             page = getpage(filepath)
-            return jsonify({
-                "message": "File processed",
-                "price": price,
-                "page": page,
-                "bw_price": 300 * page,
-            }), 200
+            return jsonify(
+                {
+                    "message": "File processed",
+                    "price": price,
+                    "page": page,
+                    "bw_price": 300 * page,
+                }
+            ), 200
         finally:
             if os.path.exists(filepath):
                 os.remove(filepath)

@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 @pytest.fixture(autouse=True)
 def patch_config():
     from config import Config
+
     original_api_key = Config.API_KEY
     Config.API_KEY = "test-key"
     yield
@@ -63,3 +64,8 @@ def color_pdf():
 @pytest.fixture
 def mixed_pdf():
     return make_solid_pdf(100, 200, 50)
+
+
+@pytest.fixture
+def two_page_pdf():
+    return make_solid_pdf(128, 128, 128, pages=2)
