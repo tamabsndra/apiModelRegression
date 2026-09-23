@@ -1,6 +1,8 @@
 import numpy as np
-from pdfmetrics import classify_pixels, analyze_page
 from PIL import Image
+
+from pdfmetrics import analyze_page, classify_pixels
+
 
 class TestClassifyPixels:
     def test_pure_red_is_all_color(self):

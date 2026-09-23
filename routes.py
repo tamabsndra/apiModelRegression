@@ -4,8 +4,6 @@ import uuid
 
 import pypdfium2 as pdfium
 from flask import jsonify, request
-from pricecounter import getpage
-from pricing import calculate_price
 
 from config import Config
 
@@ -80,10 +78,15 @@ def register_routes(app):
             return jsonify({"error": "invalid_pdf", "detail": err_msg}), 400
 
         try:
-            from pricecounter import getprice, getpage
+            from pricecounter import getpage, getprice
             price = getprice(filepath)
             page = getpage(filepath)
-            return jsonify({"message": "File processed", "price": price, "page": page, "bw_price": 300 * page}), 200
+            return jsonify({
+                "message": "File processed",
+                "price": price,
+                "page": page,
+                "bw_price": 300 * page,
+            }), 200
         finally:
             if os.path.exists(filepath):
                 os.remove(filepath)

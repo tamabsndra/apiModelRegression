@@ -1,6 +1,6 @@
-import pypdfium2 as pdfium
+
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor
+import pypdfium2 as pdfium
 
 TARGET_DPI = 300
 
@@ -21,24 +21,27 @@ def analyze_page(pil_image):
     bw_coverage = bw_count / total
     return color_coverage, bw_coverage
 
-def process_page(page_number, pdf_path):
-    pdf = pdfium.PdfDocument(pdf_path)
-    page = pdf[page_number]
+def render_page(pdf, page_index):
+    page = pdf[page_index]
     bitmap = page.render(scale=TARGET_DPI / 72)
-    pil_image = bitmap.to_pil()
-    color_coverage, bw_coverage = analyze_page(pil_image)
-    from pricing import calculate_price
-    from config import Config
-    config = Config()
-    result = calculate_price(color_coverage, bw_coverage, config)
-    return result["price"]
+    return bitmap.to_pil()
 
 def getprice(pdf_path):
     pdf = pdfium.PdfDocument(pdf_path)
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(process_page, i, pdf_path) for i in range(len(pdf))]
-        harga_total = sum(future.result() for future in futures)
-    return harga_total
+    total_color_coverage = 0.0
+    total_bw_coverage = 0.0
+    for i in range(len(pdf)):
+        pil_image = render_page(pdf, i)
+        color_cov, bw_cov = analyze_page(pil_image)
+        total_color_coverage += color_cov
+        total_bw_coverage += bw_cov
+    avg_color_coverage = total_color_coverage / len(pdf) if len(pdf) > 0 else 0.0
+    avg_bw_coverage = total_bw_coverage / len(pdf) if len(pdf) > 0 else 0.0
+    from config import Config
+    from pricing import calculate_price
+    config = Config()
+    result = calculate_price(avg_color_coverage, avg_bw_coverage, config)
+    return result["price"]
 
 def getpage(pdf_path):
     pdf = pdfium.PdfDocument(pdf_path)

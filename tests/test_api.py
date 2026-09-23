@@ -1,5 +1,6 @@
 import io
 
+
 class TestHealthz:
     def test_healthz(self, client):
         resp = client.get("/healthz")

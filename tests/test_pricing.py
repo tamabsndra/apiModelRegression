@@ -1,5 +1,6 @@
-from pricing import calculate_price, ladder_round
 from config import Config
+from pricing import calculate_price, ladder_round
+
 
 class TestLadderRound:
     def test_rounds_up(self):

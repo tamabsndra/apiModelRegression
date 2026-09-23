@@ -1,5 +1,6 @@
 from config import Config
 
+
 def ladder_round(price, step):
     if step <= 0:
         return int(price)

@@ -1,9 +1,9 @@
 import os
 import sys
-import pytest
-from PIL import Image
 from io import BytesIO
 
+import pytest
+from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -20,7 +20,7 @@ def patch_config():
 @pytest.fixture
 def app(patch_config):
     from app import create_app
-    
+
     app = create_app()
     app.config["UPLOAD_FOLDER"] = "/tmp/test_uploads"
     app.config["TESTING"] = True
