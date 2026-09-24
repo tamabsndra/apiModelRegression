@@ -7,9 +7,6 @@ class Config:
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", str(50 * 1024 * 1024)))
     MAX_PAGES = int(os.environ.get("MAX_PAGES", "500"))
 
-    PRICE_COEFF_COLOR = float(os.environ.get("PRICE_COEFF_COLOR", "19.59733806"))
-    PRICE_COEFF_BW = float(os.environ.get("PRICE_COEFF_BW", "7.05360083"))
-    PRICE_INTERCEPT = float(os.environ.get("PRICE_INTERCEPT", "191.3642"))
     PRICE_STEP = int(os.environ.get("PRICE_STEP", "250"))
     PRICE_CAP_RAW = os.environ.get("PRICE_CAP", "3000")
     PRICE_FLOOR_BW = int(os.environ.get("PRICE_FLOOR_BW", "300"))

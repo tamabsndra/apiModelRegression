@@ -1,5 +1,6 @@
 from config import Config
 from pricing import calculate_price, ladder_round
+from pricing_model import latent_price
 
 
 def make_config(step=250, cap="3000"):
@@ -37,23 +38,25 @@ class TestCalculatePrice:
         result = calculate_price(0.0, 0.10, make_config())
         assert result["price"] == 300
 
-    def test_mid_bw_snaps_to_500(self):
+    def test_half_ink_bw_page(self):
+        """50% ink, no colour. Extrapolates beyond the dataset's 7.9% max."""
         result = calculate_price(0.0, 0.50, make_config())
-        assert result["price"] == 500
-        assert result["bw_price"] == 500
+        assert result["price"] == 750
+        assert result["price"] % 250 == 0
+        assert result["bw_price"] == result["price"]
         assert result["color_price"] == 0
 
-    def test_mixed_page(self):
+    def test_full_coverage_mixed_page(self):
+        """Whole page inked, 10% of it colour."""
         result = calculate_price(0.10, 0.90, make_config())
-        assert result["price"] == 1000
-        assert result["bw_price"] == 750
-        assert result["color_price"] == 250
+        assert result["price"] == 1500
+        assert result["bw_price"] + result["color_price"] == result["price"]
 
     def test_full_color_page(self):
         result = calculate_price(1.0, 0.0, make_config())
-        assert result["price"] == 2750
+        assert result["price"] == 3000
         assert result["bw_price"] == 300
-        assert result["color_price"] == 2450
+        assert result["color_price"] == 2700
 
     def test_cap_applied(self):
         result = calculate_price(1.0, 0.0, make_config(cap="1000"))
@@ -69,9 +72,10 @@ class TestCalculatePrice:
         result = calculate_price(0.0001, 0.0, make_config())
         assert result["price"] == 500
 
-    def test_step_disabled(self):
+    def test_step_disabled_returns_unsnapped_latent(self):
         result = calculate_price(0.0, 0.50, make_config(step=0))
-        assert result["price"] == 544
+        assert result["price"] == int(latent_price(50.0, 0.0))
+        assert result["price"] % 250 != 0
 
     def test_decomposition_sums_to_price(self):
         for color, bw in [(0.0, 0.0), (0.0, 0.5), (0.1, 0.9), (1.0, 0.0), (0.4, 0.3)]:
@@ -82,3 +86,24 @@ class TestCalculatePrice:
         for bw in [0.0, 0.01, 0.05, 0.10, 0.15]:
             result = calculate_price(0.0, bw, make_config())
             assert result["price"] >= 300
+
+
+class TestCalculatePriceMonotonicity:
+    """Adding ink must never make a page cheaper."""
+
+    def test_more_bw_ink_never_costs_less(self):
+        config = make_config()
+        prices = [calculate_price(0.0, bw / 100, config)["price"] for bw in range(0, 101)]
+        assert all(b >= a for a, b in zip(prices, prices[1:])), prices
+
+    def test_more_colour_never_costs_less(self):
+        config = make_config()
+        prices = [calculate_price(c / 100, 0.5, config)["price"] for c in range(0, 51)]
+        assert all(b >= a for a, b in zip(prices, prices[1:])), prices
+
+    def test_colour_never_cheaper_than_bw(self):
+        config = make_config()
+        for bw in [0.0, 0.05, 0.2, 0.5, 0.9]:
+            bw_only = calculate_price(0.0, bw, config)["price"]
+            with_colour = calculate_price(0.01, bw - 0.01, config)["price"]
+            assert with_colour >= bw_only, (bw, with_colour, bw_only)

@@ -1,32 +1,57 @@
 import csv
 from pathlib import Path
 
+import numpy as np
+
 from config import Config
 from pricing import calculate_price
+from pricing_model import latent_price
 
 DATASET_PATH = Path(__file__).resolve().parent.parent / "new-dataset.csv"
 
+# Fitted model scores, measured with 10-fold CV and reproduced in-sample here.
+# Guards against silent regression to the old linear form (MAE ~107, R2 ~0.953).
+MAX_MAE = 55.0
+MIN_R2 = 0.97
 
-def test_dataset_regression():
+
+def load_dataset():
+    rows = list(csv.DictReader(DATASET_PATH.open()))
+    assert rows, "dataset must not be empty"
+    color = np.array([float(r["color_area"]) for r in rows])
+    bw = np.array([float(r["bw_area"]) for r in rows])
+    price = np.array([float(r["price"]) for r in rows])
+    return color, bw, color + bw, price
+
+
+def test_dataset_fit_quality():
     config = Config()
     config.PRICE_STEP = 250
     config.PRICE_CAP_RAW = "3000"
 
-    rows = list(csv.DictReader(DATASET_PATH.open()))
-    assert rows, "dataset must not be empty"
+    color, bw, print_area, actual = load_dataset()
+    predicted = np.array(
+        [calculate_price(c / 100, b / 100, config)["price"] for c, b in zip(color, bw, strict=True)]
+    )
 
-    preds = [
-        calculate_price(float(r["color_area"]) / 100, float(r["bw_area"]) / 100, config)["price"]
-        for r in rows
-    ]
-    actuals = [float(r["price"]) for r in rows]
-
-    mae = sum(abs(p - a) for p, a in zip(preds, actuals)) / len(actuals)
-    mean_actual = sum(actuals) / len(actuals)
-    ss_res = sum((p - a) ** 2 for p, a in zip(preds, actuals))
-    ss_tot = sum((a - mean_actual) ** 2 for a in actuals)
+    mae = float(np.abs(predicted - actual).mean())
+    ss_res = float(((predicted - actual) ** 2).sum())
+    ss_tot = float(((actual - actual.mean()) ** 2).sum())
     r2 = 1 - ss_res / ss_tot
 
-    print(f"\nDataset MAE={mae:.2f} IDR, R2={r2:.4f} (n={len(actuals)})")
-    assert mae <= 130, f"MAE {mae:.2f} exceeds 130"
-    assert r2 >= 0.90, f"R2 {r2:.4f} below 0.90"
+    assert mae <= MAX_MAE, f"MAE {mae:.2f} exceeds {MAX_MAE}"
+    assert r2 >= MIN_R2, f"R2 {r2:.4f} below {MIN_R2}"
+
+
+# Latent error is higher than laddered error because the labels already sit on
+# the 250 grid, which the ladder snap can hit exactly. The old linear form
+# scored 122.3 here, so this threshold still catches a regression to it.
+MAX_LATENT_MAE = 70.0
+
+
+def test_latent_price_tracks_dataset():
+    """Latent (pre-ladder) model must track the dataset closely on its own."""
+    color, _, print_area, actual = load_dataset()
+    latent = np.array([latent_price(p, c) for p, c in zip(print_area, color, strict=True)])
+    mae = float(np.abs(latent - actual).mean())
+    assert mae <= MAX_LATENT_MAE, f"latent MAE {mae:.2f} exceeds {MAX_LATENT_MAE}"

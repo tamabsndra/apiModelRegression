@@ -1,4 +1,5 @@
 from config import Config
+from pricing_model import latent_price
 
 
 def ladder_round(price, step):
@@ -11,11 +12,7 @@ def ladder_round(price, step):
 def _page_price(color_coverage, bw_coverage, config):
     color_pct = color_coverage * 100
     print_pct = (color_coverage + bw_coverage) * 100
-    raw = (
-        config.PRICE_INTERCEPT
-        + config.PRICE_COEFF_COLOR * color_pct
-        + config.PRICE_COEFF_BW * print_pct
-    )
+    raw = latent_price(print_pct, color_pct)
     floor = config.PRICE_FLOOR_BW if color_pct == 0 else config.PRICE_FLOOR_COLOR
     price = max(ladder_round(max(raw, floor), config.PRICE_STEP), floor)
     if config.PRICE_CAP is not None:
@@ -26,16 +23,16 @@ def _page_price(color_coverage, bw_coverage, config):
 def calculate_price(color_coverage, bw_coverage, config=None):
     """Price a single page from coverage fractions (0-1).
 
-    Per-page model (v1 semantics), single intercept counted once:
+    Per-page additive isotonic model (see pricing_model.py):
 
-        raw = PRICE_INTERCEPT
-            + PRICE_COEFF_COLOR * color_area_pct
-            + PRICE_COEFF_BW * print_area_pct
+        latent = INTERCEPT + f_print(print_area_pct) + f_color(color_area_pct)
 
-    where print_area_pct = (color_coverage + bw_coverage) * 100. The floor
-    (PRICE_FLOOR_BW when the page has no color, else PRICE_FLOOR_COLOR)
-    applies to raw before the ladder snap, and the snapped price is never
-    allowed below the floor. PRICE_CAP applies last.
+    where print_area_pct = (color_coverage + bw_coverage) * 100 and both f
+    terms are monotone non-decreasing, so adding ink never lowers the price.
+    The floor (PRICE_FLOOR_BW when the page has no color, else
+    PRICE_FLOOR_COLOR) applies to the latent price before the ladder snap,
+    and the snapped price is never allowed below the floor. PRICE_CAP applies
+    last.
 
     Returns:
         price: the page price after floor, ladder snap, and cap.
