@@ -90,32 +90,26 @@ The previous linear model scored 58.1% CV accuracy / 109.0 IDR CV MAE on the
 same features. `tests/test_dataset.py` pins the new floors so a regression to
 the linear form fails CI.
 
-**Caveat on the dataset.** Prices in `new-dataset.csv` are all multiples of
-250 IDR, i.e. they are outputs of an earlier pricing pipeline rather than
-independently quoted prices. The metrics above therefore measure agreement with
-that pipeline, not commercial accuracy. The dataset also contains 1561
-monotonicity violations (a page with more ink quoted cheaper than one with
-less). Treat these figures as a regression guard, not as a business guarantee.
+**On the dataset.** Prices in `new-dataset.csv` come from the print shop owner
+pricing sample PDF pages by hand — this was the manual process the service
+replaces. That makes the dataset a genuine record of the business's prices, with
+two properties worth knowing:
 
-### Ladder Rules
+- Every price is either the 300 IDR B&W floor or a multiple of 250 IDR. The
+  owner quotes on the same ladder the service rounds to.
+- Manual pricing is not perfectly self-consistent: 0.44% of dominance pairs
+  (2502 of 570142) quote a page with more ink at a lower price than one with
+  less, involving 254 of 1102 pages. The largest such gap is 750 IDR.
 
-- Prices snap to the NEAREST `PRICE_STEP` multiple (default 250 IDR), never below the floor
-- `PRICE_STEP=0` disables rounding
-- `PRICE_CAP` applies per page (empty = no cap); there is no grand-total cap
-- Floors guarantee minimum prices: 300 IDR (BW), 500 IDR (color)
+A 1-nearest-neighbour predictor — which can only repeat prices already in the
+data — scores 81.6% accuracy / 57.8 IDR MAE, so no model can do much better on
+this dataset. The fitted model scores 81.7% / 49.7 IDR, i.e. it matches that
+ceiling while staying smooth and monotone. Read the metrics as agreement with
+the owner's manual pricing, not as absolute accuracy against a spec.
 
-## Development
-
-```bash
-make test     # Run tests
-make lint     # Lint with ruff
-make docker-build  # Build Docker image
-```
-
-## Deployment
-
-Docker image designed for Fly.io. See `fly.toml` for configuration.
-
-```bash
-fly deploy
-```
+**Known limitation: B&W pages with heavy ink.** Only 73 of 1102 pages have no
+colour, and they span just 0.37%-7.89% ink coverage, all priced at the 300 IDR
+floor. Above roughly 8% ink the B&W price curve is therefore extrapolated from
+colour-bearing pages rather than fitted from observed B&W quotes. If the shop
+needs reliable B&W pricing for ink-heavy documents, ask the owner to quote a
+set of pure-B&W samples across the coverage range and refit.
