@@ -55,6 +55,10 @@ def create_app(config_class=Config):
 
     register_label_routes(app)
 
+    from train_routes import register as register_train_routes
+
+    register_train_routes(app)
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_ui(path):
