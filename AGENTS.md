@@ -27,11 +27,15 @@ Required order: `make lint` → `make test` → `make docker-build`
 
 **Price counter** (`pricecounter.py`): Single metrics module — renders PDF pages at 300 DPI via pypdfium2 (`render_page`), classifies pixels as monochrome (R==G==B, white excluded) or color (`classify_pixels`), computes coverage ratios (`analyze_page`), and sums per-page prices (`getprice`).
 
+**Operator labeling & retrain** (`routes.py` / `artivity_client.py`): Operators authenticate via the Artivity server OAuth2 flow. Samples and labels are stored on the Artivity server; this service fetches the active model and caches it for `MODEL_CACHE_TTL_SECONDS`, falling back to the baked `pricing_model_data.py` if the server is unreachable. `POST /internal/train` retrains the model from the server's latest sample/label set and is protected by `PRINT_PRICING_SERVICE_TOKEN`.
+
 ## Key Conventions
 
-- **Env vars**: `API_KEY` (fail-closed if empty), `PRICE_STEP=250` (nearest-ladder), `PRICE_CAP=3000` (per page, empty=off), `PRICE_FLOOR_BW=300`, `PRICE_FLOOR_COLOR=500`, `MAX_PAGES=500`
+- **Env vars**: `API_KEY` (fail-closed if empty), `PRICE_STEP=250` (nearest-ladder), `PRICE_CAP=3000` (per page, empty=off), `PRICE_FLOOR_BW=300`, `PRICE_FLOOR_COLOR=500`, `MAX_PAGES=500`, `ARTIVITY_SERVER_URL`, `PRINT_PRICING_SERVICE_TOKEN`, `OPERATOR_SESSION_SECRET`, `MODEL_CACHE_TTL_SECONDS=60`, `OPERATOR_COOKIE_SECURE=true`
 - **API contract**: UUID-based file uploads only, HMAC constant-time comparison for API keys (latin-1 bytes), JSON response `{price, page, bw_price, pages}` where `bw_price` and `price` both equal the sum of their per-page values; `413 too_many_pages` when the PDF exceeds `MAX_PAGES`
 - **Ladder rules**: Prices round to the NEAREST step (not up), floors guarantee minimums, cap applies per page only — no grand-total cap (page-count proportionality)
+- **Operator auth**: OAuth2 via the Artivity server; `login` is exempt from the `X-Requested-With` CSRF header because the user is not yet authenticated (product-accepted login-CSRF)
+- **Production secret**: `OPERATOR_SESSION_SECRET` must be a stable, random value. With gunicorn's 2 workers, a per-process `os.urandom(32)` fallback gives each worker a different signing key and breaks operator sessions across requests
 
 ## Testing Approach
 
