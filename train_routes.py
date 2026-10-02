@@ -37,6 +37,10 @@ def register(app):
         if not rows:
             return jsonify({"error": "bad_request", "detail": "no rows"}), 400
 
-        model = fit(rows)
+        try:
+            model = fit(rows)
+        except (ValueError, KeyError, TypeError) as err:
+            return jsonify({"error": "bad_request", "detail": f"malformed rows: {err}"}), 400
+
         metrics = evaluate(model, rows, _eval_config())
         return jsonify({"data": {**model, "metrics": metrics}})

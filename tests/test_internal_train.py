@@ -36,6 +36,25 @@ def test_rejects_missing_service_token(client):
     assert resp.status_code in (401, 403)
 
 
+def test_rejects_wrong_service_token(client):
+    resp = client.post("/internal/train", json={"rows": ROWS}, headers={"X-API-Key": "wrong"})
+    assert resp.status_code == 403
+
+
+def test_rejects_empty_rows(client):
+    resp = client.post("/internal/train", json={"rows": []}, headers={"X-API-Key": "svc-token"})
+    assert resp.status_code == 400
+
+
+def test_rejects_malformed_rows(client):
+    resp = client.post(
+        "/internal/train",
+        json={"rows": [{"bw_area": "oops", "color_area": 1.0, "price": 500.0}]},
+        headers={"X-API-Key": "svc-token"},
+    )
+    assert resp.status_code == 400
+
+
 def test_trains_and_returns_coefficients(client):
     resp = client.post("/internal/train", json={"rows": ROWS}, headers={"X-API-Key": "svc-token"})
     assert resp.status_code == 200
