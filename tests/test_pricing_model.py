@@ -1,17 +1,24 @@
 import numpy as np
 
+import model_store
 from config import Config
 from pricing import calculate_price
 from pricing_model import latent_price
 
 
+def _model():
+    return model_store.baked_model()
+
+
 class TestLatentPriceMonotonicity:
     def test_more_print_area_never_costs_less(self):
-        values = [latent_price(p, 0.0) for p in np.arange(0.0, 100.1, 1.0)]
+        model = _model()
+        values = [latent_price(model, p, 0.0) for p in np.arange(0.0, 100.1, 1.0)]
         assert all(b >= a for a, b in zip(values, values[1:])), values
 
     def test_more_colour_area_never_costs_less(self):
-        values = [latent_price(50.0, c) for c in np.arange(0.0, 50.1, 1.0)]
+        model = _model()
+        values = [latent_price(model, 50.0, c) for c in np.arange(0.0, 50.1, 1.0)]
         assert all(b >= a for a, b in zip(values, values[1:])), values
 
 
@@ -56,13 +63,15 @@ BW_PRICE_CURVE = [
 
 class TestBwPriceCurve:
     def test_bw_only_curve(self):
+        model = _model()
         config = Config()
         for coverage, expected in BW_PRICE_CURVE:
-            actual = calculate_price(0.0, coverage, config)["price"]
+            actual = calculate_price(0.0, coverage, config, model=model)["price"]
             assert actual == expected, f"bw coverage {coverage}: {actual} != {expected}"
 
     def test_bw_only_never_exceeds_full_colour_page(self):
+        model = _model()
         config = Config()
-        heaviest_bw = calculate_price(0.0, 1.0, config)["price"]
-        full_colour = calculate_price(1.0, 0.0, config)["price"]
+        heaviest_bw = calculate_price(0.0, 1.0, config, model=model)["price"]
+        full_colour = calculate_price(1.0, 0.0, config, model=model)["price"]
         assert heaviest_bw <= full_colour

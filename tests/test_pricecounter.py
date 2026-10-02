@@ -1,9 +1,17 @@
 import io
 
 import numpy as np
+import pytest
 from PIL import Image
 
+import model_store
 from pricecounter import analyze_page, classify_pixels, getprice, getprice_detail
+
+
+@pytest.fixture(autouse=True)
+def reset_store_cache():
+    model_store.reset_cache()
+    yield
 
 
 def make_pdf_bytes(r, g, b, pages=1):

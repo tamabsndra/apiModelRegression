@@ -1,18 +1,18 @@
 from config import Config
+from model_store import get_active_model
 from pricing_model import latent_price
 
 
 def ladder_round(price, step):
-    """Snap price to the nearest multiple of step; step <= 0 disables snapping."""
     if step <= 0:
         return int(price)
     return round(price / step) * step
 
 
-def _page_price(color_coverage, bw_coverage, config):
+def page_price(model, color_coverage, bw_coverage, config):
     color_pct = color_coverage * 100
     print_pct = (color_coverage + bw_coverage) * 100
-    raw = latent_price(print_pct, color_pct)
+    raw = latent_price(model, print_pct, color_pct)
     floor = config.PRICE_FLOOR_BW if color_pct == 0 else config.PRICE_FLOOR_COLOR
     price = max(ladder_round(max(raw, floor), config.PRICE_STEP), floor)
     if config.PRICE_CAP is not None:
@@ -20,32 +20,11 @@ def _page_price(color_coverage, bw_coverage, config):
     return price
 
 
-def calculate_price(color_coverage, bw_coverage, config=None):
-    """Price a single page from coverage fractions (0-1).
-
-    Per-page additive isotonic model (see pricing_model.py):
-
-        latent = INTERCEPT + f_print(print_area_pct) + f_color(color_area_pct)
-
-    where print_area_pct = (color_coverage + bw_coverage) * 100 and both f
-    terms are monotone non-decreasing, so adding ink never lowers the price.
-    The floor (PRICE_FLOOR_BW when the page has no color, else
-    PRICE_FLOOR_COLOR) applies to the latent price before the ladder snap,
-    and the snapped price is never allowed below the floor. PRICE_CAP applies
-    last.
-
-    Returns:
-        price: the page price after floor, ladder snap, and cap.
-        bw_price: what the page would cost in pure B&W — the page price with
-            color_coverage forced to 0.0.
-        color_price: max(0, price - bw_price), the color premium over B&W.
-    """
+def calculate_price(color_coverage, bw_coverage, config=None, model=None):
     if config is None:
         config = Config()
-    page_price = _page_price(color_coverage, bw_coverage, config)
-    bw_only_price = _page_price(0.0, bw_coverage, config)
-    return {
-        "price": page_price,
-        "bw_price": bw_only_price,
-        "color_price": max(0, page_price - bw_only_price),
-    }
+    if model is None:
+        model = get_active_model()
+    page = page_price(model, color_coverage, bw_coverage, config)
+    bw_only = page_price(model, 0.0, bw_coverage, config)
+    return {"price": page, "bw_price": bw_only, "color_price": max(0, page - bw_only)}

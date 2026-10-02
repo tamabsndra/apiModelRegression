@@ -2,6 +2,7 @@ import numpy as np
 import pypdfium2 as pdfium
 
 from config import Config
+from model_store import get_active_model
 from pricing import calculate_price
 from pricing_model import latent_price
 
@@ -39,30 +40,23 @@ def getprice(pdf_path):
 
 
 def getprice_detail(pdf_path):
-    """Return per-page coverage and pricing breakdown.
-
-    Each page dict contains:
-    - index: 1-based page number
-    - print_pct / color_pct / bw_pct: ink coverage as percentage (0-100)
-    - latent: pre-floor, pre-ladder model output
-    - bw_price / color_price / price: post-processing price components
-    """
     pdf = pdfium.PdfDocument(pdf_path)
     config = Config()
+    model = get_active_model()
     details = []
     for i in range(len(pdf)):
         pil_image = render_page(pdf, i)
         color_cov, bw_cov = analyze_page(pil_image)
         print_pct = (color_cov + bw_cov) * 100
         color_pct = color_cov * 100
-        pricing = calculate_price(color_cov, bw_cov, config)
+        pricing = calculate_price(color_cov, bw_cov, config, model=model)
         details.append(
             {
                 "index": i + 1,
                 "print_pct": round(print_pct, 4),
                 "color_pct": round(color_pct, 4),
                 "bw_pct": round(bw_cov * 100, 4),
-                "latent": round(float(latent_price(print_pct, color_pct)), 2),
+                "latent": round(float(latent_price(model, print_pct, color_pct)), 2),
                 "bw_price": pricing["bw_price"],
                 "color_price": pricing["color_price"],
                 "price": pricing["price"],
