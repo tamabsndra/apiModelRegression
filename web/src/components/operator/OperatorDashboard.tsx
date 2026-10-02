@@ -34,8 +34,12 @@ export function OperatorDashboard({ onLoggedOut }: { onLoggedOut: () => void }) 
 
   async function remove(id: string) {
     if (!confirm("Hapus sample ini?")) return;
-    await labelApi.deleteSample(id);
-    load();
+    try {
+      await labelApi.deleteSample(id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Hapus sample gagal.");
+    }
   }
 
   const active = versions.find((v) => v.status === "active");

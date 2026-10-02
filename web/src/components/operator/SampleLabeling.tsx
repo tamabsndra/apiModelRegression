@@ -31,8 +31,12 @@ export function SampleLabeling({
   async function savePage(pageId: string) {
     const value = Number(draft[pageId]);
     if (!Number.isFinite(value) || value <= 0) return;
-    await labelApi.patchPage(pageId, Math.round(value));
-    onChanged();
+    try {
+      await labelApi.patchPage(pageId, Math.round(value));
+      onChanged();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Simpan label gagal.");
+    }
   }
 
   async function runRetrain() {

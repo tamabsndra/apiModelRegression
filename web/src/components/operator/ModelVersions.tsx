@@ -30,7 +30,7 @@ export function ModelVersions({
                   await labelApi.activateModelVersion(v.id);
                   onChanged();
                 }}
-                className="neu-raised-sm neu-press min-h-[40px] rounded-lg px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft"
+                className="neu-raised-sm neu-press min-h-[44px] rounded-lg px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft"
               >
                 aktifkan
               </button>

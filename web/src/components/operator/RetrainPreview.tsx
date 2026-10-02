@@ -38,14 +38,14 @@ export function RetrainPreview({
             await labelApi.activateModelVersion(candidate.id);
             onActivated();
           }}
-          className="neu-raised-sm neu-press min-h-[41px] rounded-xl bg-brand-blue px-5 font-display text-[14px] font-bold text-surface-white"
+          className="neu-raised-sm neu-press min-h-[44px] rounded-xl bg-brand-blue px-5 font-display text-[14px] font-bold text-surface-white"
         >
           Aktifkan model ini
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="neu-raised-sm neu-press min-h-[41px] rounded-xl px-5 font-display text-[14px] font-bold text-ink-soft"
+          className="neu-raised-sm neu-press min-h-[44px] rounded-xl px-5 font-display text-[14px] font-bold text-ink-soft"
         >
           Batal
         </button>
