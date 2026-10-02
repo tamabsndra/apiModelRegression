@@ -19,7 +19,9 @@ Required order: `make lint` → `make test` → `make docker-build`
 
 **App factory** (`app.py:create_app`): Flask app created via factory pattern, loads config from `config.py`, registers routes from `routes.py`.
 
-**Routes** (`routes.py`): Single endpoint `POST /api/v3/upload` accepts multipart PDF with `api-key` header. Validates PDF via magic bytes, enforces `MAX_PAGES`, extracts coverage metrics, calls `pricecounter.getprice()`. Health check at `GET /healthz`. Startup janitor in `app.py` removes orphan uploads older than 1 hour.
+**Routes** (`routes.py`): `POST /api/v3/upload` accepts multipart PDF with `api-key` header and returns totals plus a `pages` array with per-page coverage and price breakdown. Validates PDF via magic bytes, enforces `MAX_PAGES`. `GET /api/v3/config` publishes public limits and pricing rules for the UI (never `API_KEY`). Health check at `GET /healthz`. Startup janitor in `app.py` removes orphan uploads older than 1 hour.
+
+**Web UI** (`web/`, served at `GET /`): Vite + React + TypeScript + Tailwind v4 + daisyUI 5 with `motion` for animation. Built to `public/`, which is gitignored and served by Flask. Design tokens follow the Artivity design system (ink/blue/rose palette, Nunito Sans + Geist + Questrial, neumorphic surfaces derived from the paper canvas). `GET /api/v3/config` drives the limit copy so the UI never hardcodes server limits. Run `make web-build` after UI changes; `make check` runs the whole gate.
 
 **Pricing model** (`pricing.py`): Additive isotonic model `latent = INTERCEPT + f_print(print_area_pct) + f_color(color_area_pct)`, where both terms are monotone step functions loaded from the generated `pricing_model_data.py`. Applies floors (300 BW, 500 color), ladder rounding to nearest `PRICE_STEP` (default 250), then optional per-page cap. Refit with `python3 tools_fit_model.py`; `tests/test_pricing_model.py` fails if the dataset hash no longer matches the artifact.
 
@@ -28,7 +30,7 @@ Required order: `make lint` → `make test` → `make docker-build`
 ## Key Conventions
 
 - **Env vars**: `API_KEY` (fail-closed if empty), `PRICE_STEP=250` (nearest-ladder), `PRICE_CAP=3000` (per page, empty=off), `PRICE_FLOOR_BW=300`, `PRICE_FLOOR_COLOR=500`, `MAX_PAGES=500`
-- **API contract**: UUID-based file uploads only, HMAC constant-time comparison for API keys (latin-1 bytes), JSON response `{price, page, bw_price}`; `413 too_many_pages` when the PDF exceeds `MAX_PAGES`
+- **API contract**: UUID-based file uploads only, HMAC constant-time comparison for API keys (latin-1 bytes), JSON response `{price, page, bw_price, pages}` where `bw_price` and `price` both equal the sum of their per-page values; `413 too_many_pages` when the PDF exceeds `MAX_PAGES`
 - **Ladder rules**: Prices round to the NEAREST step (not up), floors guarantee minimums, cap applies per page only — no grand-total cap (page-count proportionality)
 
 ## Testing Approach
@@ -37,7 +39,7 @@ Synthetic PDF fixtures via Pillow — no real PDF files needed. Tests cover pixe
 
 ## Deployment
 
-Docker image for Fly.io. Port 8080, gunicorn with 2 workers, healthcheck on `/healthz`. See `fly.toml` for config.
+Docker image deployed via Dokploy using `docker-compose.yml`. Port 8080, gunicorn with 2 workers, healthcheck on `/healthz`. See `README.md` for the Dokploy steps.
 
 ## Common Pitfalls
 
