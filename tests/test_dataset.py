@@ -3,9 +3,15 @@ from pathlib import Path
 
 import numpy as np
 
+import model_store
 from config import Config
 from pricing import calculate_price
 from pricing_model import latent_price
+
+
+def _model():
+    return model_store.baked_model()
+
 
 DATASET_PATH = Path(__file__).resolve().parent.parent / "new-dataset.csv"
 
@@ -25,13 +31,17 @@ def load_dataset():
 
 
 def test_dataset_fit_quality():
+    model = _model()
     config = Config()
     config.PRICE_STEP = 250
     config.PRICE_CAP_RAW = "3000"
 
     color, bw, print_area, actual = load_dataset()
     predicted = np.array(
-        [calculate_price(c / 100, b / 100, config)["price"] for c, b in zip(color, bw, strict=True)]
+        [
+            calculate_price(c / 100, b / 100, config, model=model)["price"]
+            for c, b in zip(color, bw, strict=True)
+        ]
     )
 
     mae = float(np.abs(predicted - actual).mean())
@@ -51,7 +61,8 @@ MAX_LATENT_MAE = 70.0
 
 def test_latent_price_tracks_dataset():
     """Latent (pre-ladder) model must track the dataset closely on its own."""
+    model = _model()
     color, _, print_area, actual = load_dataset()
-    latent = np.array([latent_price(p, c) for p, c in zip(print_area, color, strict=True)])
+    latent = np.array([latent_price(model, p, c) for p, c in zip(print_area, color, strict=True)])
     mae = float(np.abs(latent - actual).mean())
     assert mae <= MAX_LATENT_MAE, f"latent MAE {mae:.2f} exceeds {MAX_LATENT_MAE}"

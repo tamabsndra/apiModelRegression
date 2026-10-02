@@ -33,6 +33,28 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Typecheck and build frontend
+        run: npm run build
+        working-directory: web
+
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: public/
+          retention-days: 7
+
   docker-build:
     needs: lint-and-test
     runs-on: ubuntu-latest

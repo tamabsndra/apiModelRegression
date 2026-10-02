@@ -17,3 +17,9 @@ class Config:
         if self.PRICE_CAP_RAW == "" or self.PRICE_CAP_RAW is None:
             return None
         return int(self.PRICE_CAP_RAW)
+
+    ARTIVITY_SERVER_URL = os.environ.get("ARTIVITY_SERVER_URL", "").rstrip("/")
+    PRINT_PRICING_SERVICE_TOKEN = os.environ.get("PRINT_PRICING_SERVICE_TOKEN", "")
+    OPERATOR_SESSION_SECRET = os.environ.get("OPERATOR_SESSION_SECRET", "")
+    MODEL_CACHE_TTL_SECONDS = int(os.environ.get("MODEL_CACHE_TTL_SECONDS", "60"))
+    OPERATOR_COOKIE_SECURE = os.environ.get("OPERATOR_COOKIE_SECURE", "true").lower() == "true"

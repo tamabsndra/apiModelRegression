@@ -1,15 +1,37 @@
 import os
 import time
 
-from flask import Flask
+from flask import Flask, send_from_directory
 
 from config import Config
 
 ORPHAN_MAX_AGE_SECONDS = 3600
 
+UI_NOT_BUILT_HTML = """<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artivity Print Calculator</title>
+</head>
+<body style="font-family: system-ui; max-width: 40rem; margin: 4rem auto;
+  padding: 0 1.5rem; line-height: 1.6">
+<h1>UI belum di-build</h1>
+<p>API sudah jalan. Halaman ini muncul karena bundle React belum ada di <code>public/</code>.</p>
+<p>Jalankan:</p>
+<pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem"><code>cd web
+npm install
+npm run build</code></pre>
+<p>Endpoint API tetap tersedia: <code>POST /api/v3/upload</code> dan
+<code>GET /healthz</code>.</p>
+</body>
+</html>
+"""
+
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    static_dir = os.path.join(os.path.dirname(__file__), "public")
+    app = Flask(__name__, static_folder=static_dir, static_url_path="/static")
     app.config.from_object(config_class)
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -18,6 +40,40 @@ def create_app(config_class=Config):
     from routes import register_routes
 
     register_routes(app)
+
+    app.secret_key = app.config.get("OPERATOR_SESSION_SECRET") or os.urandom(32)
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SECURE=bool(app.config.get("OPERATOR_COOKIE_SECURE", True)),
+        SESSION_COOKIE_SAMESITE="Lax",
+    )
+    from label_auth import register as register_label_auth
+
+    register_label_auth(app)
+
+    from label_routes import register as register_label_routes
+
+    register_label_routes(app)
+
+    from train_routes import register as register_train_routes
+
+    register_train_routes(app)
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_ui(path):
+        """Serve the built SPA, falling back to build instructions.
+
+        The bundle is a build artifact (public/ is gitignored), so a fresh
+        clone has no UI until `cd web && npm run build` runs.
+        """
+        full = os.path.join(static_dir, path)
+        if path and os.path.isfile(full):
+            return send_from_directory(static_dir, path)
+        index = os.path.join(static_dir, "index.html")
+        if os.path.isfile(index):
+            return send_from_directory(static_dir, "index.html")
+        return UI_NOT_BUILT_HTML, 200, {"Content-Type": "text/html; charset=utf-8"}
 
     return app
 

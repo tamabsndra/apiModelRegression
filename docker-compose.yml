@@ -1,0 +1,30 @@
+services:
+  api-model-regression:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: api-model-regression:latest
+    restart: unless-stopped
+    environment:
+      API_KEY: ${API_KEY:?Set API_KEY before deploying}
+      UPLOAD_FOLDER: /tmp/artivity-uploads
+      MAX_CONTENT_LENGTH: ${MAX_CONTENT_LENGTH:-52428800}
+      MAX_PAGES: ${MAX_PAGES:-500}
+      PRICE_STEP: ${PRICE_STEP:-250}
+      PRICE_CAP: ${PRICE_CAP-3000}
+      PRICE_FLOOR_BW: ${PRICE_FLOOR_BW:-300}
+      PRICE_FLOOR_COLOR: ${PRICE_FLOOR_COLOR:-500}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
