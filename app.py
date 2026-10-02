@@ -51,6 +51,10 @@ def create_app(config_class=Config):
 
     register_label_auth(app)
 
+    from label_routes import register as register_label_routes
+
+    register_label_routes(app)
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_ui(path):
