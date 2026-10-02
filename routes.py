@@ -88,16 +88,19 @@ def register_routes(app):
             ), 413
 
         try:
-            from pricecounter import getpage, getprice
+            from pricecounter import getprice_detail
 
-            price = getprice(filepath)
-            page = getpage(filepath)
+            pages = getprice_detail(filepath)
+            page = len(pages)
+            price = sum(p["price"] for p in pages)
+            bw_price = sum(p["bw_price"] for p in pages)
             return jsonify(
                 {
                     "message": "File processed",
                     "price": price,
                     "page": page,
-                    "bw_price": 300 * page,
+                    "bw_price": bw_price,
+                    "pages": pages,
                 }
             ), 200
         finally:
@@ -107,3 +110,21 @@ def register_routes(app):
     @app.route("/healthz", methods=["GET"])
     def healthz():
         return jsonify({"status": "ok"}), 200
+
+    @app.route("/api/v3/config", methods=["GET"])
+    def public_config():
+        """Expose the pricing and upload limits the UI must state truthfully.
+
+        Never includes API_KEY: the UI only needs limits and pricing rules.
+        """
+        config = Config()
+        return jsonify(
+            {
+                "max_pages": config.MAX_PAGES,
+                "max_content_length": config.MAX_CONTENT_LENGTH,
+                "price_step": config.PRICE_STEP,
+                "price_cap": config.PRICE_CAP,
+                "price_floor_bw": config.PRICE_FLOOR_BW,
+                "price_floor_color": config.PRICE_FLOOR_COLOR,
+            }
+        ), 200

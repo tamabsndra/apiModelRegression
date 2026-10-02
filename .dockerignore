@@ -19,3 +19,8 @@ tests/
 .DS_Store
 uploads/*
 !uploads/.gitkeep
+
+# Frontend: source is copied into the build stage, artifacts are regenerated
+web/node_modules
+web/dist
+public

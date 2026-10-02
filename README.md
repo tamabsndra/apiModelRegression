@@ -12,6 +12,71 @@ make dev
 # Server runs on http://localhost:8080
 ```
 
+## Web UI
+
+The React UI is served by the same Flask app at `GET /`, so one container
+serves both the calculator and the API. It is a build artifact: a fresh clone
+has no bundle until you build it.
+
+```bash
+make web-install   # npm ci in web/
+make web-build     # outputs to public/, served by Flask at /
+make dev           # open http://localhost:8080
+```
+
+For UI work with hot reload, run Flask and Vite side by side. Vite proxies
+`/api` and `/healthz` to Flask on port 8080:
+
+```bash
+make dev           # terminal 1: Flask on :8080
+make web-dev       # terminal 2: Vite on :5173
+```
+
+What the UI does:
+
+- Reads `GET /api/v3/config` so the page states the real limits and pricing
+  rules of the running server instead of hardcoding them.
+- Uploads with `POST /api/v3/upload` and renders one row per page: coverage
+  bars for colour and B&W ink, the model's base price, the B&W price, the
+  colour premium, and the final page price.
+- Sorts and filters pages (by number, price, or ink coverage), and expands any
+  row to show the raw numbers behind its price.
+
+The API key is entered in the page and kept in `localStorage` for that browser
+only. It is sent as the `api-key` header on each upload; nothing is stored
+server-side.
+
+`make check` runs the full local gate: lint, backend tests, and the frontend
+typecheck plus build.
+
+## Deploy to Dokploy
+
+This repository includes `docker-compose.yml` for Dokploy's Compose deployment
+mode. The service builds from the existing Dockerfile, listens on port `8080`,
+and reports readiness through `GET /healthz`.
+
+1. Push this repository to the Git provider connected to Dokploy.
+2. In Dokploy, create a project and add a Compose deployment pointing to this
+   repository.
+3. Set at least `API_KEY` in Dokploy's environment variables. The service
+   rejects every upload when `API_KEY` is empty.
+4. Optionally override `MAX_CONTENT_LENGTH`, `MAX_PAGES`, `PRICE_STEP`,
+   `PRICE_CAP`, `PRICE_FLOOR_BW`, and `PRICE_FLOOR_COLOR`.
+5. Deploy, then route your Dokploy domain or proxy to the
+   `api-model-regression` service on port `8080`.
+
+For a local Compose check:
+
+```bash
+cp .env.example .env
+# Set a real API_KEY in .env, then:
+docker compose up --build
+curl http://localhost:8080/healthz
+```
+
+`PRICE_CAP` accepts an empty string to disable the per-page cap. Set it as
+empty in Dokploy rather than omitting it if you need cap-free pricing.
+
 ## API Reference
 
 ### `POST /api/v3/upload`
@@ -19,7 +84,7 @@ make dev
 Upload a PDF and get pricing estimate.
 
 **Headers:**
-- `X-API-Key: <your-api-key>` (required)
+- `api-key: <your-api-key>` (required)
 
 **Body:** `multipart/form-data` with field `file` (PDF)
 
@@ -56,6 +121,21 @@ Health check. Returns `{"status": "ok"}`.
 | `PRICE_CAP` | `3000` | Per-page price cap (empty=off) |
 | `PRICE_FLOOR_BW` | `300` | Minimum BW price |
 | `PRICE_FLOOR_COLOR` | `500` | Minimum color price |
+
+### `GET /api/v3/config`
+
+Public limits and pricing rules used by the web UI. Never includes `API_KEY`.
+
+```json
+{
+  "max_pages": 500,
+  "max_content_length": 52428800,
+  "price_step": 250,
+  "price_cap": 3000,
+  "price_floor_bw": 300,
+  "price_floor_color": 500
+}
+```
 
 ## Model Documentation
 

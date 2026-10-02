@@ -3,7 +3,7 @@ import io
 import numpy as np
 from PIL import Image
 
-from pricecounter import analyze_page, classify_pixels, getprice
+from pricecounter import analyze_page, classify_pixels, getprice, getprice_detail
 
 
 def make_pdf_bytes(r, g, b, pages=1):
@@ -84,3 +84,53 @@ class TestAnalyzePage:
         color_cov, bw_cov = analyze_page(img)
         assert color_cov == 0.0
         assert abs(bw_cov - 0.10) < 0.01
+
+
+class TestGetpriceDetail:
+    def test_returns_list_per_page(self, tmp_path):
+        path = tmp_path / "two_bw.pdf"
+        path.write_bytes(make_pdf_bytes(128, 128, 128, pages=2))
+        result = getprice_detail(str(path))
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+    def test_each_page_has_required_fields(self, tmp_path):
+        path = tmp_path / "one.pdf"
+        path.write_bytes(make_pdf_bytes(128, 128, 128, pages=1))
+        result = getprice_detail(str(path))
+        page = result[0]
+        required = {
+            "index",
+            "print_pct",
+            "color_pct",
+            "bw_pct",
+            "latent",
+            "bw_price",
+            "color_price",
+            "price",
+        }
+        assert required.issubset(page.keys())
+
+    def test_blank_page_zero_coverage(self, tmp_path):
+        path = tmp_path / "blank.pdf"
+        path.write_bytes(make_pdf_bytes(255, 255, 255, pages=1))
+        result = getprice_detail(str(path))
+        assert result[0]["print_pct"] == 0.0
+        assert result[0]["color_pct"] == 0.0
+        assert result[0]["bw_pct"] == 0.0
+        assert result[0]["price"] >= 300
+
+    def test_total_matches_getprice(self, tmp_path):
+        path = tmp_path / "multi.pdf"
+        path.write_bytes(make_pdf_bytes(200, 50, 100, pages=3))
+        detail_total = sum(p["price"] for p in getprice_detail(str(path)))
+        assert detail_total == getprice(str(path))
+
+    def test_solid_color_page_has_zero_bw(self, tmp_path):
+        path = tmp_path / "color.pdf"
+        path.write_bytes(make_pdf_bytes(255, 0, 0, pages=1))
+        result = getprice_detail(str(path))
+        assert result[0]["bw_pct"] == 0.0
+        assert result[0]["color_pct"] > 0.9
+        assert result[0]["bw_price"] <= result[0]["price"]
+        assert result[0]["color_price"] >= 0
