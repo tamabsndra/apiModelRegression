@@ -3,6 +3,7 @@ import { labelApi, uploadSample } from "../../lib/labelApi";
 import { formatIDR, formatNumber } from "../../lib/format";
 import type { ModelVersion, SampleSummary } from "../../lib/types";
 import { SampleLabeling } from "./SampleLabeling";
+import { ModelVersions } from "./ModelVersions";
 
 export function OperatorDashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [samples, setSamples] = useState<SampleSummary[]>([]);
@@ -128,6 +129,7 @@ export function OperatorDashboard({ onLoggedOut }: { onLoggedOut: () => void }) 
           onChanged={load}
         />
       ) : null}
+      <ModelVersions versions={versions} onChanged={load} />
     </main>
   );
 }
