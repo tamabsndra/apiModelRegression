@@ -44,6 +44,13 @@ def _token():
     return session.get("token")
 
 
+def _proxy(call):
+    try:
+        return jsonify(call())
+    except artivity_client.ArtivityError as err:
+        return jsonify({"error": "artivity_error", "detail": err.message}), err.status or 502
+
+
 def register(app):
     @app.post("/api/label/samples")
     @require_owner
@@ -51,17 +58,21 @@ def register(app):
         file = request.files.get("file")
         if file is None:
             return jsonify({"error": "bad_request", "detail": "no file"}), 400
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             return jsonify({"error": "bad_request", "detail": "file type not allowed"}), 400
 
         path = os.path.join(current_app.config["UPLOAD_FOLDER"], f"sample-{uuid.uuid4().hex}.pdf")
         file.save(path)
-        magic_ok = open(path, "rb").read(5) == b"%PDF-"
+        with open(path, "rb") as handle:
+            magic_ok = handle.read(5) == b"%PDF-"
         if not magic_ok:
             os.remove(path)
             return jsonify({"error": "invalid_pdf", "detail": "not a PDF"}), 400
         try:
-            page_count = len(pdfium.PdfDocument(path))
+            try:
+                page_count = len(pdfium.PdfDocument(path))
+            except Exception:
+                return jsonify({"error": "invalid_pdf", "detail": "malformed PDF"}), 400
             if page_count > current_app.config["MAX_PAGES"]:
                 return jsonify(
                     {
@@ -74,8 +85,8 @@ def register(app):
             if os.path.exists(path):
                 os.remove(path)
 
-        try:
-            sample = artivity_client.post(
+        return _proxy(
+            lambda: artivity_client.post(
                 "/print-pricing/samples",
                 _token(),
                 {
@@ -84,31 +95,31 @@ def register(app):
                     "pages": pages,
                 },
             )
-        except artivity_client.ArtivityError as err:
-            return jsonify({"error": "artivity_error", "detail": err.message}), err.status or 502
-        return jsonify(sample)
+        )
 
     @app.get("/api/label/samples")
     @require_owner
     def list_samples():
-        return jsonify(artivity_client.get("/print-pricing/samples", _token()))
+        return _proxy(lambda: artivity_client.get("/print-pricing/samples", _token()))
 
     @app.get("/api/label/samples/<sample_id>")
     @require_owner
     def get_sample(sample_id):
-        return jsonify(artivity_client.get(f"/print-pricing/samples/{sample_id}", _token()))
+        return _proxy(lambda: artivity_client.get(f"/print-pricing/samples/{sample_id}", _token()))
 
     @app.delete("/api/label/samples/<sample_id>")
     @require_owner
     def delete_sample(sample_id):
-        return jsonify(artivity_client.delete(f"/print-pricing/samples/{sample_id}", _token()))
+        return _proxy(
+            lambda: artivity_client.delete(f"/print-pricing/samples/{sample_id}", _token())
+        )
 
     @app.patch("/api/label/pages/<page_id>")
     @require_owner
     def patch_page(page_id):
         body = request.get_json(silent=True) or {}
-        return jsonify(
-            artivity_client.patch(
+        return _proxy(
+            lambda: artivity_client.patch(
                 f"/print-pricing/pages/{page_id}",
                 _token(),
                 {"labeled_price": body.get("labeled_price")},
@@ -118,16 +129,13 @@ def register(app):
     @app.post("/api/label/retrain")
     @require_owner
     def retrain():
-        try:
-            return jsonify(artivity_client.post("/print-pricing/retrain", _token(), {}))
-        except artivity_client.ArtivityError as err:
-            return jsonify({"error": "artivity_error", "detail": err.message}), err.status or 502
+        return _proxy(lambda: artivity_client.post("/print-pricing/retrain", _token(), {}))
 
     @app.post("/api/label/model-versions/<version_id>/activate")
     @require_owner
     def activate(version_id):
-        return jsonify(
-            artivity_client.post(
+        return _proxy(
+            lambda: artivity_client.post(
                 f"/print-pricing/model-versions/{version_id}/activate", _token(), {}
             )
         )

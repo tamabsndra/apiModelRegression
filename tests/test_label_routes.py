@@ -58,3 +58,25 @@ def test_retrain_proxies_to_go(client, monkeypatch):
     resp = client.post("/api/label/retrain", headers={"X-Requested-With": "XMLHttpRequest"})
     assert resp.status_code == 200
     assert resp.get_json()["id"] == "v1"
+
+
+def test_missing_file_returns_400(client):
+    resp = client.post("/api/label/samples", headers={"X-Requested-With": "XMLHttpRequest"})
+    assert resp.status_code == 400
+
+
+def test_artivity_error_maps_status(client, monkeypatch):
+    def boom(path, token):
+        raise artivity_client.ArtivityError(404, "not found")
+
+    monkeypatch.setattr(artivity_client, "get", boom)
+    resp = client.get("/api/label/samples")
+    assert resp.status_code == 404
+    assert resp.get_json()["error"] == "artivity_error"
+
+
+def test_requires_login_without_session(monkeypatch):
+    app = create_app(TestConfig)
+    app.config.update(TESTING=True, SECRET_KEY="test-secret")
+    resp = app.test_client().get("/api/label/samples")
+    assert resp.status_code == 401
