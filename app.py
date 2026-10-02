@@ -41,6 +41,16 @@ def create_app(config_class=Config):
 
     register_routes(app)
 
+    app.secret_key = app.config.get("OPERATOR_SESSION_SECRET") or os.urandom(32)
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SECURE=bool(app.config.get("OPERATOR_COOKIE_SECURE", True)),
+        SESSION_COOKIE_SAMESITE="Lax",
+    )
+    from label_auth import register as register_label_auth
+
+    register_label_auth(app)
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_ui(path):
