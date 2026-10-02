@@ -221,3 +221,27 @@ floor. Above roughly 8% ink the B&W price curve is therefore extrapolated from
 colour-bearing pages rather than fitted from observed B&W quotes. If the shop
 needs reliable B&W pricing for ink-heavy documents, ask the owner to quote a
 set of pure-B&W samples across the coverage range and refit.
+
+## Operator labeling & retrain
+
+The `/api/v3/upload` flow stays the default customer view. An owner-only
+`#/operator` hash route adds a small in-app console for retraining the
+pricing model without a redeploy.
+
+- **Access**: owner accounts only. Log in with the same email/password used in
+  the main Artivity system; the service proxies to `artivity-server` and
+  rejects non-owners with `403`.
+- **Flow**: upload a sample PDF → review per-page coverage thumbnails → enter
+  the real price the owner would quote → repeat across samples → trigger
+  retrain → preview MAE / p95 / max-error metrics → activate (hot-swap) or
+  dismiss the candidate.
+- **Rollback**: every activation pushes a new active model version; activating
+  any other version switches back instantly without a redeploy. The runtime
+  caches the active model per process for `MODEL_CACHE_TTL_SECONDS` and
+  always serves the last known model if `artivity-server` is unreachable.
+- **Required env vars** (Dokploy): `ARTIVITY_SERVER_URL`,
+  `PRINT_PRICING_SERVICE_TOKEN`, `OPERATOR_SESSION_SECRET`,
+  `MODEL_CACHE_TTL_SECONDS`, `OPERATOR_COOKIE_SECURE`. The session secret
+  **must** be a stable, random value in production — `app.secret_key` falls
+  back to `os.urandom(32)`, which is per-process and breaks operator
+  sessions across gunicorn's 2 workers if unset.

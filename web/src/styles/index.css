@@ -1,0 +1,207 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "artivity";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fafc;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #0f172a;
+
+  --color-primary: #e11d62;
+  --color-primary-content: #ffffff;
+  --color-secondary: #0c82e8;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0c82e8;
+  --color-accent-content: #ffffff;
+  --color-neutral: #0f172a;
+  --color-neutral-content: #ffffff;
+
+  --color-info: #0c82e8;
+  --color-info-content: #ffffff;
+  --color-success: #059669;
+  --color-success-content: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-content: #ffffff;
+  --color-error: #dc2626;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 1rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.28rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-display: "Nunito Sans", "Poppins", "Montserrat", system-ui, sans-serif;
+  --font-sans: "Nunito Sans", "Poppins", system-ui, sans-serif;
+  --font-accent: "Questrial", "Inter Tight", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  --color-ink: #0f172a;
+  --color-ink-soft: #334155;
+  --color-ink-muted: #64748b;
+  --color-brand-blue: #0c82e8;
+  --color-brand-blue-hover: #0a6dc5;
+  --color-brand-blue-tint: #eff8ff;
+  --color-brand-rose: #e11d62;
+  --color-brand-rose-hover: #be1255;
+  --color-surface-white: #ffffff;
+  --color-surface-paper: #f8fafc;
+  --color-hairline: #e2e8f0;
+
+  --color-cmyk-cyan: #00a3e0;
+  --color-cmyk-magenta: #e11d62;
+  --color-cmyk-yellow: #ffdc00;
+  --color-cmyk-key: #0f172a;
+
+  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-elevated: 0 10px 25px rgba(15, 23, 42, 0.08), 0 4px 6px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 20px 40px rgba(15, 23, 42, 0.1), 0 8px 12px rgba(15, 23, 42, 0.04);
+}
+
+/* Neumorphism: shadows are derived from the paper canvas, not from flat grey.
+   Light face uses white (base-100), dark face uses the hairline slate (base-300),
+   so the depth reads as pressed paper rather than a generic soft-UI skin. */
+@layer components {
+  .neu-raised {
+    background-color: var(--color-surface-white);
+    border: 1px solid color-mix(in srgb, var(--color-hairline) 72%, transparent);
+    box-shadow:
+      6px 6px 14px rgba(15, 23, 42, 0.07),
+      -6px -6px 14px rgba(255, 255, 255, 0.9);
+  }
+
+  .neu-raised-sm {
+    background-color: var(--color-surface-white);
+    border: 1px solid color-mix(in srgb, var(--color-hairline) 60%, transparent);
+    box-shadow:
+      3px 3px 8px rgba(15, 23, 42, 0.06),
+      -3px -3px 8px rgba(255, 255, 255, 0.85);
+  }
+
+  .neu-inset {
+    background-color: var(--color-surface-paper);
+    border: 1px solid color-mix(in srgb, var(--color-hairline) 80%, transparent);
+    box-shadow:
+      inset 4px 4px 9px rgba(15, 23, 42, 0.06),
+      inset -4px -4px 9px rgba(255, 255, 255, 0.95);
+  }
+
+  .neu-inset-sm {
+    background-color: var(--color-surface-paper);
+    border: 1px solid color-mix(in srgb, var(--color-hairline) 70%, transparent);
+    box-shadow:
+      inset 2px 2px 5px rgba(15, 23, 42, 0.05),
+      inset -2px -2px 5px rgba(255, 255, 255, 0.9);
+  }
+
+  .neu-press {
+    transition:
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .neu-press:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset 3px 3px 7px rgba(15, 23, 42, 0.07),
+      inset -3px -3px 7px rgba(255, 255, 255, 0.9);
+  }
+
+  /* Prepress decor: one motif per area, always quiet. */
+  .dot-grid {
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+  }
+
+  .crop-marks::before,
+  .crop-marks::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: color-mix(in srgb, var(--color-ink-muted) 55%, transparent);
+    pointer-events: none;
+  }
+
+  .crop-marks::before {
+    top: 10px;
+    left: 10px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+  }
+
+  .crop-marks::after {
+    right: 10px;
+    bottom: 10px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+  }
+
+  .perforated {
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--color-hairline) 0 6px,
+      transparent 6px 12px
+    );
+    height: 1px;
+  }
+
+  .tabnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-blue);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
