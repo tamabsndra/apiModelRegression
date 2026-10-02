@@ -46,9 +46,12 @@ def _token():
 
 def _proxy(call):
     try:
-        return jsonify(call())
+        result = call()
     except artivity_client.ArtivityError as err:
         return jsonify({"error": "artivity_error", "detail": err.message}), err.status or 502
+    if result is None:
+        return jsonify({"error": "not_found", "detail": "not found"}), 404
+    return jsonify(result)
 
 
 def register(app):
